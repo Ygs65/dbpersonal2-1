@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>遊戲管理後台 - 點擊冷卻 / 限流設定</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1f2937 0%, #020617 55%, #020617 100%);
+      color: #e5e7eb;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    h1,
+    h2 {
+      color: #facc15;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 16px;
+      padding: 22px 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, .55);
+      border: 1px solid #1f2937;
+    }
+
+    label {
+      display: block;
+      margin-top: 8px;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 9px 11px;
+      border-radius: 10px;
+      border: 1px solid #4b5563;
+      background: #020617;
+      color: #e5e7eb;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    input[type="number"]:focus {
+      border-color: #22c55e;
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3);
+    }
+
+    button {
+      margin-top: 12px;
+      padding: 9px 18px;
+      border-radius: 999px;
+      border: none;
+      background: #22c55e;
+      color: #022c22;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .1s ease, box-shadow .1s ease, background .1s ease;
+    }
+
+    button:hover {
+      background: #16a34a;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(22, 163, 74, 0.45);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .col {
+      flex: 1 1 260px;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    .status {
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    .status.ok {
+      color: #4ade80;
+    }
+
+    .status.err {
+      color: #fb7185;
+    }
+
+    a {
+      color: #38bdf8;
+    }
+
+    /* Admin 登入遮罩 */
+    .admin-login-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.93), rgba(15, 23, 42, 0.98));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5000;
+      backdrop-filter: blur(6px);
+    }
+
+    .admin-login-card {
+      background: #020617;
+      padding: 28px 26px 26px;
+      border-radius: 18px;
+      width: 360px;
+      max-width: calc(100% - 32px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+      color: #f9fafb;
+      border: 1px solid #1f2937;
+      animation: popIn .2s ease-out;
+    }
+
+    .admin-login-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      justify-content: center;
+    }
+
+    .admin-login-icon {
+      font-size: 26px;
+    }
+
+    .admin-login-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #facc15;
+    }
+
+    .admin-login-sub {
+      text-align: center;
+      font-size: 13px;
+      color: #9ca3af;
+      margin-bottom: 18px;
+    }
+
+    .password-label {
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .password-wrapper {
+      position: relative;
+      margin-top: 2px;
+    }
+
+    .password-wrapper input {
+      width: 100%;
+      padding: 11px 44px 11px 13px;
+      border-radius: 999px;
+      border: 1px solid #334155;
+      background: #020617;
+      color: #e5e7eb;
+      outline: none;
+      font-size: 14px;
+    }
+
+    .password-wrapper input::placeholder {
+      color: #6b7280;
+    }
+
+    .password-wrapper input:focus {
+      border-color: #22c55e;
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35);
+    }
+
+    .toggle-pass {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 0;
+    }
+
+    .toggle-pass:hover {
+      color: #e5e7eb;
+    }
+
+    .admin-login-btn {
+      width: 100%;
+      padding: 11px;
+      border-radius: 999px;
+      background: #22c55e;
+      color: #022c22;
+      font-size: 15px;
+      font-weight: 800;
+      margin-top: 18px;
+    }
+
+    .login-status {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #fca5a5;
+      min-height: 18px;
+      text-align: center;
+    }
+
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.97);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 16px;
+      }
+
+      .card {
+        padding: 18px 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Admin Login Screen -->
+  <div id="adminLoginScreen" class="admin-login-overlay">
+    <div class="admin-login-card">
+      <div class="admin-login-title-row">
+        <span class="admin-login-icon">🔒</span>
+        <span class="admin-login-title">管理員登入</span>
+      </div>
+      <div class="admin-login-sub">請輸入管理者密碼，以進入 Redis 遊戲後台</div>
+
+      <div class="password-label">管理密碼</div>
+      <div class="password-wrapper">
+        <input type="password" id="adminPasswordInput" placeholder="請輸入管理者密碼" />
+        <button id="togglePassBtn" class="toggle-pass" type="button">👁</button>
+      </div>
+
+      <button id="adminLoginBtn" class="admin-login-btn" type="button">登入</button>
+
+      <div id="adminLoginStatus" class="login-status"></div>
+    </div>
+  </div>
+
+  <h1>遊戲管理後台</h1>
+  <p>這個頁面可以即時調整「點擊冷卻」與「滑動視窗限流」設定，<br>不需要重新部署 Render，就能改變遊戲節奏。</p>
+
+  <div class="card">
+    <h2>目前設定值</h2>
+    <div id="current-config">
+      （請先登入管理者）
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card col">
+      <h2>點擊冷卻時間（單次冷卻）</h2>
+      <label for="cooldown_ms">冷卻時間（毫秒）</label>
+      <input type="number" id="cooldown_ms" min="0" step="50" value="500" />
+      <div class="hint">
+        例如：500 = 0.5秒，1000 = 1秒，0 = 無冷卻（危險、不建議）。
+      </div>
+      <button id="btn-set-cooldown">更新冷卻設定</button>
+      <div id="status-cooldown" class="status"></div>
+    </div>
+
+    <div class="card col">
+      <h2>滑動視窗限流（防暴力連點）</h2>
+      <label for="window_ms">視窗長度（毫秒）</label>
+      <input type="number" id="window_ms" min="100" step="100" value="1000" />
+      <div class="hint">
+        例如：1000 = 最近 1 秒、3000 = 最近 3 秒。
+      </div>
+
+      <label for="max_hits">視窗內最大點擊次數</label>
+      <input type="number" id="max_hits" min="1" step="1" value="3" />
+      <div class="hint">
+        例如：1秒內最多 3 次，超過就會被擋下。
+      </div>
+
+      <button id="btn-set-rate">更新限流設定</button>
+      <div id="status-rate" class="status"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>小提醒</h2>
+    <ul>
+      <li>這個頁面已有簡易密碼保護，正式環境仍建議搭配 VPN / 校內網路。</li>
+      <li>前端遊戲會自動套用新的設定，不需要重啟伺服器。</li>
+      <li>如果設定太極端（例如 0ms 冷卻、1秒100次），可能會讓 Redis 壓力變大。</li>
+    </ul>
+    <p class="hint">
+      目前遊戲首頁：<a href="/">回到遊戲首頁</a>
+    </p>
+  </div>
+
+  <script>
+    // 這個變數存「目前登入成功的密碼」，每次呼叫 /admin API 都會帶上去
+    let ADMIN_PASSWORD = "";
+
+    // DOM 抓取
+    const loginScreen = document.getElementById("adminLoginScreen");
+    const passInput = document.getElementById("adminPasswordInput");
+    const loginBtn = document.getElementById("adminLoginBtn");
+    const statusText = document.getElementById("adminLoginStatus");
+    const toggleBtn = document.getElementById("togglePassBtn");
+
+    // 按 Enter 也可以登入
+    passInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        loginAdmin();
+      }
+    });
+
+    // 按鈕登入
+    loginBtn.addEventListener("click", loginAdmin);
+
+    // 顯示 / 隱藏密碼
+    toggleBtn.addEventListener("click", () => {
+      if (passInput.type === "password") {
+        passInput.type = "text";
+        toggleBtn.textContent = "🙈";
+      } else {
+        passInput.type = "password";
+        toggleBtn.textContent = "👁";
+      }
+    });
+
+    async function loginAdmin() {
+      const inputPass = passInput.value.trim();
+      statusText.textContent = "";
+
+      if (!inputPass) {
+        statusText.textContent = "請輸入密碼！";
+        return;
+      }
+
+      // 先暫存，再去打 /admin/config 試試看
+      ADMIN_PASSWORD = inputPass;
+      statusText.textContent = "驗證中…";
+
+      const ok = await fetchConfig(true);
+      if (ok) {
+        loginScreen.style.display = "none";
+      } else {
+        ADMIN_PASSWORD = "";
+        statusText.textContent = "密碼錯誤，請再試一次";
+      }
+    }
+
+    // 從後端讀取設定
+    async function fetchConfig(isLoginAttempt = false) {
+      const target = document.getElementById('current-config');
+      try {
+        const res = await fetch('/admin/config', {
+          headers: { "X-ADMIN-PASS": ADMIN_PASSWORD }
+        });
+
+        if (res.status === 401) {
+          if (!isLoginAttempt) {
+            target.innerText = '尚未登入或未授權';
+          }
+          return false;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          target.innerText = '讀取設定失敗';
+          return false;
+        }
+
+        target.innerText =
+          `冷卻：${data.cooldown_ms} ms\n` +
+          `滑動視窗：${data.window_ms} ms\n` +
+          `視窗內最大點擊：${data.max_hits} 次`;
+
+        document.getElementById('cooldown_ms').value = data.cooldown_ms;
+        document.getElementById('window_ms').value = data.window_ms;
+        document.getElementById('max_hits').value = data.max_hits;
+
+        if (isLoginAttempt) {
+          statusText.textContent = "登入成功！";
+        }
+        return true;
+      } catch (e) {
+        target.innerText = '讀取設定發生錯誤';
+        if (isLoginAttempt) {
+          statusText.textContent = "連線錯誤，請稍後再試";
+        }
+        return false;
+      }
+    }
+
+    // 更新冷卻時間
+    async function setCooldown() {
+      const val = parseInt(document.getElementById('cooldown_ms').value || '0', 10);
+      const status = document.getElementById('status-cooldown');
+      status.innerText = '送出中…';
+      status.className = 'status';
+
+      try {
+        const res = await fetch('/admin/set_cooldown', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-ADMIN-PASS': ADMIN_PASSWORD
+          },
+          body: JSON.stringify({ cooldown_ms: val })
+        });
+        const data = await res.json();
+        if (res.status === 401 || !data.success) {
+          status.innerText = '未授權或更新失敗';
+          status.className = 'status err';
+          return;
+        }
+        status.innerText = `已更新冷卻：${data.cooldown_ms} ms`;
+        status.className = 'status ok';
+        fetchConfig();
+      } catch (e) {
+        status.innerText = '更新過程出錯';
+        status.className = 'status err';
+      }
+    }
+
+    // 更新滑動視窗限流設定
+    async function setRateLimit() {
+      const windowMs = parseInt(document.getElementById('window_ms').value || '1000', 10);
+      const maxHits = parseInt(document.getElementById('max_hits').value || '3', 10);
+      const status = document.getElementById('status-rate');
+      status.innerText = '送出中…';
+      status.className = 'status';
+
+      try {
+        const res = await fetch('/admin/set_rate_limit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-ADMIN-PASS': ADMIN_PASSWORD
+          },
+          body: JSON.stringify({ window_ms: windowMs, max_hits: maxHits })
+        });
+        const data = await res.json();
+        if (res.status === 401 || !data.success) {
+          status.innerText = '未授權或更新失敗';
+          status.className = 'status err';
+          return;
+        }
+        status.innerText =
+          `已更新滑動視窗：${data.window_ms} ms，視窗內最大點擊：${data.max_hits} 次`;
+        status.className = 'status ok';
+        fetchConfig();
+      } catch (e) {
+        status.innerText = '更新過程出錯';
+        status.className = 'status err';
+      }
+    }
+
+    document.getElementById('btn-set-cooldown').addEventListener('click', setCooldown);
+    document.getElementById('btn-set-rate').addEventListener('click', setRateLimit);
+  </script>
+</body>
+
+</html>
